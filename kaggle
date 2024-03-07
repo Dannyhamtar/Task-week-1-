@@ -1,0 +1,481 @@
+{
+  "metadata": {
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "name": "python",
+      "version": "3.10.13",
+      "mimetype": "text/x-python",
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "pygments_lexer": "ipython3",
+      "nbconvert_exporter": "python",
+      "file_extension": ".py"
+    },
+    "kaggle": {
+      "accelerator": "none",
+      "dataSources": [
+        {
+          "sourceId": 38454,
+          "sourceType": "datasetVersion",
+          "datasetId": 2709
+        },
+        {
+          "sourceId": 260251,
+          "sourceType": "datasetVersion",
+          "datasetId": 108980
+        }
+      ],
+      "isInternetEnabled": false,
+      "language": "python",
+      "sourceType": "notebook",
+      "isGpuEnabled": false
+    },
+    "colab": {
+      "name": "Exercise: Explore Your Data",
+      "provenance": [],
+      "include_colab_link": true
+    }
+  },
+  "nbformat_minor": 0,
+  "nbformat": 4,
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Dannyhamtar/Task-week-1-/blob/main/kaggle\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "source": [
+        "\n",
+        "# IMPORTANT: RUN THIS CELL IN ORDER TO IMPORT YOUR KAGGLE DATA SOURCES\n",
+        "# TO THE CORRECT LOCATION (/kaggle/input) IN YOUR NOTEBOOK,\n",
+        "# THEN FEEL FREE TO DELETE THIS CELL.\n",
+        "# NOTE: THIS NOTEBOOK ENVIRONMENT DIFFERS FROM KAGGLE'S PYTHON\n",
+        "# ENVIRONMENT SO THERE MAY BE MISSING LIBRARIES USED BY YOUR\n",
+        "# NOTEBOOK.\n",
+        "\n",
+        "import os\n",
+        "import sys\n",
+        "from tempfile import NamedTemporaryFile\n",
+        "from urllib.request import urlopen\n",
+        "from urllib.parse import unquote, urlparse\n",
+        "from urllib.error import HTTPError\n",
+        "from zipfile import ZipFile\n",
+        "import tarfile\n",
+        "import shutil\n",
+        "\n",
+        "CHUNK_SIZE = 40960\n",
+        "DATA_SOURCE_MAPPING = 'melbourne-housing-snapshot:https%3A%2F%2Fstorage.googleapis.com%2Fkaggle-data-sets%2F2709%2F38454%2Fbundle%2Farchive.zip%3FX-Goog-Algorithm%3DGOOG4-RSA-SHA256%26X-Goog-Credential%3Dgcp-kaggle-com%2540kaggle-161607.iam.gserviceaccount.com%252F20240307%252Fauto%252Fstorage%252Fgoog4_request%26X-Goog-Date%3D20240307T035618Z%26X-Goog-Expires%3D259200%26X-Goog-SignedHeaders%3Dhost%26X-Goog-Signature%3D8dc730596a2bbf3731c6eeb531fd7656a75a83755ab04bab56c322868c37cb2f1260d5197bbffb5025ffe57441510947dd225dbe2262e3f208a8171486f75d636c76b76d0a6d6603cbe9de71770bab2559e94ef17cd068d6b97d333f3380c07ccfbe80043c7d8749ea9a638f98739dd229defa1b887afc9bf4070862d40839b33894d2bb0d362e66b0b4c43e4efd6eb7f66e5a4731eff08f3294429f2d1fdfd4dd7314eb0bea7bd568095e7813dd9b15ea0cf3039b9399d59409e27b14c26b94169d81ae318cd4d27d52a53e28b3dde92a443eb5663786803fe1113b0038c84f7238a4186a05a762ffe107a01ea2b0ad1f8005e4ec62305a64dd6804142cc5e3,home-data-for-ml-course:https%3A%2F%2Fstorage.googleapis.com%2Fkaggle-data-sets%2F108980%2F260251%2Fbundle%2Farchive.zip%3FX-Goog-Algorithm%3DGOOG4-RSA-SHA256%26X-Goog-Credential%3Dgcp-kaggle-com%2540kaggle-161607.iam.gserviceaccount.com%252F20240307%252Fauto%252Fstorage%252Fgoog4_request%26X-Goog-Date%3D20240307T035618Z%26X-Goog-Expires%3D259200%26X-Goog-SignedHeaders%3Dhost%26X-Goog-Signature%3D3f98b282d2bb4f633392580eaebb2bda453f865fde512632e2b02bc7bc5eba9b6bb538c0b25d7cff99a53703f1063dac330ccf7e85179f7931b2d59d5a86cc0f7b45ab704fba9428381960efc14e6c64112f54a6a7118b981a42aaedc560dbd0a3d5f1e4bdecc479fe83bd0c6067801630c63763664783c72651bcccaef2d498cb1cb61fdad9c17b38827f86fcdae7fb7d60554cf49d47498404d3a2496fcac54ef22ef54c46a96dd2d37e8b2370f44eb034f2ed54f095c67db148df1697310339302ec84e8da53bf8827fc1d80dcee83620c84579867d7ba23525bc80fe8f6e058efe85e4b72694311b0e87eb6b7afddbe27d2852543c8e044afb0efce81c81'\n",
+        "\n",
+        "KAGGLE_INPUT_PATH='/kaggle/input'\n",
+        "KAGGLE_WORKING_PATH='/kaggle/working'\n",
+        "KAGGLE_SYMLINK='kaggle'\n",
+        "\n",
+        "!umount /kaggle/input/ 2> /dev/null\n",
+        "shutil.rmtree('/kaggle/input', ignore_errors=True)\n",
+        "os.makedirs(KAGGLE_INPUT_PATH, 0o777, exist_ok=True)\n",
+        "os.makedirs(KAGGLE_WORKING_PATH, 0o777, exist_ok=True)\n",
+        "\n",
+        "try:\n",
+        "  os.symlink(KAGGLE_INPUT_PATH, os.path.join(\"..\", 'input'), target_is_directory=True)\n",
+        "except FileExistsError:\n",
+        "  pass\n",
+        "try:\n",
+        "  os.symlink(KAGGLE_WORKING_PATH, os.path.join(\"..\", 'working'), target_is_directory=True)\n",
+        "except FileExistsError:\n",
+        "  pass\n",
+        "\n",
+        "for data_source_mapping in DATA_SOURCE_MAPPING.split(','):\n",
+        "    directory, download_url_encoded = data_source_mapping.split(':')\n",
+        "    download_url = unquote(download_url_encoded)\n",
+        "    filename = urlparse(download_url).path\n",
+        "    destination_path = os.path.join(KAGGLE_INPUT_PATH, directory)\n",
+        "    try:\n",
+        "        with urlopen(download_url) as fileres, NamedTemporaryFile() as tfile:\n",
+        "            total_length = fileres.headers['content-length']\n",
+        "            print(f'Downloading {directory}, {total_length} bytes compressed')\n",
+        "            dl = 0\n",
+        "            data = fileres.read(CHUNK_SIZE)\n",
+        "            while len(data) > 0:\n",
+        "                dl += len(data)\n",
+        "                tfile.write(data)\n",
+        "                done = int(50 * dl / int(total_length))\n",
+        "                sys.stdout.write(f\"\\r[{'=' * done}{' ' * (50-done)}] {dl} bytes downloaded\")\n",
+        "                sys.stdout.flush()\n",
+        "                data = fileres.read(CHUNK_SIZE)\n",
+        "            if filename.endswith('.zip'):\n",
+        "              with ZipFile(tfile) as zfile:\n",
+        "                zfile.extractall(destination_path)\n",
+        "            else:\n",
+        "              with tarfile.open(tfile.name) as tarfile:\n",
+        "                tarfile.extractall(destination_path)\n",
+        "            print(f'\\nDownloaded and uncompressed: {directory}')\n",
+        "    except HTTPError as e:\n",
+        "        print(f'Failed to load (likely expired) {download_url} to path {destination_path}')\n",
+        "        continue\n",
+        "    except OSError as e:\n",
+        "        print(f'Failed to load {download_url} to path {destination_path}')\n",
+        "        continue\n",
+        "\n",
+        "print('Data source import complete.')\n"
+      ],
+      "metadata": {
+        "id": "OUnE67NyDhQg"
+      },
+      "cell_type": "code",
+      "outputs": [],
+      "execution_count": null
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**[Machine Learning Course Home Page](https://www.kaggle.com/learn/machine-learning)**\n",
+        "\n",
+        "---\n"
+      ],
+      "metadata": {
+        "id": "x4pkIuiuDhQi"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "This exercise will test your ability to read a data file and understand statistics about the data.\n",
+        "\n",
+        "In later exercises, you will apply techniques to filter the data, build a machine learning model, and iteratively improve your model.\n",
+        "\n",
+        "The course examples use data from Melbourne. To ensure you can apply these techniques on your own, you will have to apply them to a new dataset (with house prices from Iowa).\n",
+        "\n",
+        "The exercises use a \"notebook\" coding environment.  In case you are unfamiliar with notebooks, we have a [90-second intro video](https://www.youtube.com/watch?v=4C2qMnaIKL4).\n",
+        "\n",
+        "# Exercises\n",
+        "\n",
+        "Run the following cell to set up code-checking, which will verify your work as you go."
+      ],
+      "metadata": {
+        "id": "3C1ezV9cDhQj"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Set up code checking\n",
+        "from learntools.core import binder\n",
+        "binder.bind(globals())\n",
+        "from learntools.machine_learning.ex2 import *\n",
+        "print(\"Setup Complete\")"
+      ],
+      "metadata": {
+        "execution": {
+          "iopub.status.busy": "2024-03-07T03:29:25.220617Z",
+          "iopub.execute_input": "2024-03-07T03:29:25.221077Z",
+          "iopub.status.idle": "2024-03-07T03:29:25.229388Z",
+          "shell.execute_reply.started": "2024-03-07T03:29:25.221035Z",
+          "shell.execute_reply": "2024-03-07T03:29:25.227935Z"
+        },
+        "trusted": true,
+        "id": "loR_PxFzDhQj",
+        "outputId": "c104796b-e96f-4341-8c78-24a26389bd83"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "Setup Complete\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Step 1: Loading Data\n",
+        "Read the Iowa data file into a Pandas DataFrame called `home_data`."
+      ],
+      "metadata": {
+        "id": "W-jsQjgjDhQj"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import pandas as pd\n",
+        "\n",
+        "# Path of the file to read\n",
+        "iowa_file_path = '../input/home-data-for-ml-course/train.csv'\n",
+        "\n",
+        "# Fill in the line below to read the file into a variable home_data\n",
+        "home_data = pd.read_csv(iowa_file_path)\n",
+        "\n",
+        "# Call line below with no argument to check that you've loaded the data correctly\n",
+        "step_1.check()"
+      ],
+      "metadata": {
+        "execution": {
+          "iopub.status.busy": "2024-03-07T03:32:25.867813Z",
+          "iopub.execute_input": "2024-03-07T03:32:25.868747Z",
+          "iopub.status.idle": "2024-03-07T03:32:25.941404Z",
+          "shell.execute_reply.started": "2024-03-07T03:32:25.868694Z",
+          "shell.execute_reply": "2024-03-07T03:32:25.940055Z"
+        },
+        "trusted": true,
+        "id": "ll-3qxpVDhQk",
+        "outputId": "f308db2d-0e9a-4219-fe62-754e5a639d2b"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "<IPython.core.display.Javascript object>",
+            "application/javascript": "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"outcomeType\": 1, \"valueTowardsCompletion\": 0.5, \"interactionType\": 1, \"questionType\": 1, \"questionId\": \"1_LoadHomeData\", \"learnToolsVersion\": \"0.3.4\", \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\"}}, \"*\")"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "Correct",
+            "text/markdown": "<span style=\"color:#33cc33\">Correct</span>"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Lines below will give you a hint or solution code\n",
+        "step_1.hint()\n",
+        "step_1.solution()"
+      ],
+      "metadata": {
+        "execution": {
+          "iopub.status.busy": "2024-03-07T03:32:44.209488Z",
+          "iopub.execute_input": "2024-03-07T03:32:44.209948Z",
+          "iopub.status.idle": "2024-03-07T03:32:44.222971Z",
+          "shell.execute_reply.started": "2024-03-07T03:32:44.209907Z",
+          "shell.execute_reply": "2024-03-07T03:32:44.221626Z"
+        },
+        "trusted": true,
+        "id": "pUaWT3JBDhQk",
+        "outputId": "11576eae-dd91-4ccf-eaf2-a2d53efaad48"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "<IPython.core.display.Javascript object>",
+            "application/javascript": "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"interactionType\": 2, \"questionType\": 1, \"questionId\": \"1_LoadHomeData\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\", \"outcomeType\": 4}}, \"*\")"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "Hint: Use the `pd.read_csv` function",
+            "text/markdown": "<span style=\"color:#3366cc\">Hint:</span> Use the `pd.read_csv` function"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "<IPython.core.display.Javascript object>",
+            "application/javascript": "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"interactionType\": 3, \"questionType\": 1, \"questionId\": \"1_LoadHomeData\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\", \"outcomeType\": 4}}, \"*\")"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "Solution: \n```python\nhome_data = pd.read_csv(iowa_file_path)\n```",
+            "text/markdown": "<span style=\"color:#33cc99\">Solution:</span> \n```python\nhome_data = pd.read_csv(iowa_file_path)\n```"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Step 2: Review The Data\n",
+        "Use the command you learned to view summary statistics of the data. Then fill in variables to answer the following questions"
+      ],
+      "metadata": {
+        "id": "dahkyxqTDhQk"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Print summary statistics in next line\n",
+        "print(home_data.describe())"
+      ],
+      "metadata": {
+        "execution": {
+          "iopub.status.busy": "2024-03-07T03:32:58.853803Z",
+          "iopub.execute_input": "2024-03-07T03:32:58.855115Z",
+          "iopub.status.idle": "2024-03-07T03:32:58.957004Z",
+          "shell.execute_reply.started": "2024-03-07T03:32:58.855059Z",
+          "shell.execute_reply": "2024-03-07T03:32:58.955921Z"
+        },
+        "trusted": true,
+        "id": "W6pwsCD1DhQk",
+        "outputId": "448b622a-c929-4166-b7ec-a5b684b0e20c"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "                Id   MSSubClass  LotFrontage        LotArea  OverallQual  \\\ncount  1460.000000  1460.000000  1201.000000    1460.000000  1460.000000   \nmean    730.500000    56.897260    70.049958   10516.828082     6.099315   \nstd     421.610009    42.300571    24.284752    9981.264932     1.382997   \nmin       1.000000    20.000000    21.000000    1300.000000     1.000000   \n25%     365.750000    20.000000    59.000000    7553.500000     5.000000   \n50%     730.500000    50.000000    69.000000    9478.500000     6.000000   \n75%    1095.250000    70.000000    80.000000   11601.500000     7.000000   \nmax    1460.000000   190.000000   313.000000  215245.000000    10.000000   \n\n       OverallCond    YearBuilt  YearRemodAdd   MasVnrArea   BsmtFinSF1  ...  \\\ncount  1460.000000  1460.000000   1460.000000  1452.000000  1460.000000  ...   \nmean      5.575342  1971.267808   1984.865753   103.685262   443.639726  ...   \nstd       1.112799    30.202904     20.645407   181.066207   456.098091  ...   \nmin       1.000000  1872.000000   1950.000000     0.000000     0.000000  ...   \n25%       5.000000  1954.000000   1967.000000     0.000000     0.000000  ...   \n50%       5.000000  1973.000000   1994.000000     0.000000   383.500000  ...   \n75%       6.000000  2000.000000   2004.000000   166.000000   712.250000  ...   \nmax       9.000000  2010.000000   2010.000000  1600.000000  5644.000000  ...   \n\n        WoodDeckSF  OpenPorchSF  EnclosedPorch    3SsnPorch  ScreenPorch  \\\ncount  1460.000000  1460.000000    1460.000000  1460.000000  1460.000000   \nmean     94.244521    46.660274      21.954110     3.409589    15.060959   \nstd     125.338794    66.256028      61.119149    29.317331    55.757415   \nmin       0.000000     0.000000       0.000000     0.000000     0.000000   \n25%       0.000000     0.000000       0.000000     0.000000     0.000000   \n50%       0.000000    25.000000       0.000000     0.000000     0.000000   \n75%     168.000000    68.000000       0.000000     0.000000     0.000000   \nmax     857.000000   547.000000     552.000000   508.000000   480.000000   \n\n          PoolArea       MiscVal       MoSold       YrSold      SalePrice  \ncount  1460.000000   1460.000000  1460.000000  1460.000000    1460.000000  \nmean      2.758904     43.489041     6.321918  2007.815753  180921.195890  \nstd      40.177307    496.123024     2.703626     1.328095   79442.502883  \nmin       0.000000      0.000000     1.000000  2006.000000   34900.000000  \n25%       0.000000      0.000000     5.000000  2007.000000  129975.000000  \n50%       0.000000      0.000000     6.000000  2008.000000  163000.000000  \n75%       0.000000      0.000000     8.000000  2009.000000  214000.000000  \nmax     738.000000  15500.000000    12.000000  2010.000000  755000.000000  \n\n[8 rows x 38 columns]\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# What is the average lot size (rounded to nearest integer)?\n",
+        "avg_lot_size = round(home_data['LotArea'].mean())\n",
+        "\n",
+        "current_year = 2024\n",
+        "newest_home_age = current_year - home_data['YearBuilt'].max()\n",
+        "\n",
+        "# Checks your answers\n",
+        "step_2.check()"
+      ],
+      "metadata": {
+        "execution": {
+          "iopub.status.busy": "2024-03-07T03:33:28.822619Z",
+          "iopub.execute_input": "2024-03-07T03:33:28.823354Z",
+          "iopub.status.idle": "2024-03-07T03:33:28.835939Z",
+          "shell.execute_reply.started": "2024-03-07T03:33:28.823305Z",
+          "shell.execute_reply": "2024-03-07T03:33:28.834756Z"
+        },
+        "trusted": true,
+        "id": "mo4gyNS2DhQk",
+        "outputId": "65e38115-4fe5-4c62-e973-4dbc9c61d33f"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "<IPython.core.display.Javascript object>",
+            "application/javascript": "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"outcomeType\": 1, \"valueTowardsCompletion\": 0.5, \"interactionType\": 1, \"questionType\": 1, \"questionId\": \"2_HomeDescription\", \"learnToolsVersion\": \"0.3.4\", \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\"}}, \"*\")"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "Correct",
+            "text/markdown": "<span style=\"color:#33cc33\">Correct</span>"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "step_2.hint()\n",
+        "step_2.solution()"
+      ],
+      "metadata": {
+        "execution": {
+          "iopub.status.busy": "2024-03-07T03:34:06.019974Z",
+          "iopub.execute_input": "2024-03-07T03:34:06.020393Z",
+          "iopub.status.idle": "2024-03-07T03:34:06.037113Z",
+          "shell.execute_reply.started": "2024-03-07T03:34:06.020363Z",
+          "shell.execute_reply": "2024-03-07T03:34:06.035677Z"
+        },
+        "trusted": true,
+        "id": "6k3EG9U9DhQl",
+        "outputId": "347bc3ff-8695-47fa-c23d-8ba3a4e68a98"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "<IPython.core.display.Javascript object>",
+            "application/javascript": "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"interactionType\": 2, \"questionType\": 1, \"questionId\": \"2_HomeDescription\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\", \"outcomeType\": 4}}, \"*\")"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "Hint: Run the describe command. Lot size is in the column called LotArea. Also look at YearBuilt. Remember to round lot size ",
+            "text/markdown": "<span style=\"color:#3366cc\">Hint:</span> Run the describe command. Lot size is in the column called LotArea. Also look at YearBuilt. Remember to round lot size "
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "<IPython.core.display.Javascript object>",
+            "application/javascript": "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"interactionType\": 3, \"questionType\": 1, \"questionId\": \"2_HomeDescription\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\", \"outcomeType\": 4}}, \"*\")"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "Solution: \n```python\n# using data read from home_data.describe()\navg_lot_size = 10517\nnewest_home_age = 14\n\n```",
+            "text/markdown": "<span style=\"color:#33cc99\">Solution:</span> \n```python\n# using data read from home_data.describe()\navg_lot_size = 10517\nnewest_home_age = 14\n\n```"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Think About Your Data\n",
+        "\n",
+        "The newest house in your data isn't that new.  A few potential explanations for this:\n",
+        "1. They haven't built new houses where this data was collected.\n",
+        "1. The data was collected a long time ago. Houses built after the data publication wouldn't show up.\n",
+        "\n",
+        "If the reason is explanation #1 above, does that affect your trust in the model you build with this data? What about if it is reason #2?\n",
+        "\n",
+        "How could you dig into the data to see which explanation is more plausible?\n",
+        "\n",
+        "Check out this **[discussion thread](https://www.kaggle.com/learn-forum/60581)** to see what others think or to add your ideas.\n",
+        "\n",
+        "# Keep Going\n",
+        "\n",
+        "You are ready for **[Your First Machine Learning Model](https://www.kaggle.com/dansbecker/your-first-machine-learning-model).**\n"
+      ],
+      "metadata": {
+        "id": "8TBZ8tlLDhQl"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "---\n",
+        "**[Machine Learning Course Home Page](https://www.kaggle.com/learn/machine-learning)**\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "9U67nB6XDhQl"
+      }
+    }
+  ]
+}
